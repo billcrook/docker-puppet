@@ -1,0 +1,22 @@
+#!/bin/bash
+
+pushd .
+
+echo "Creating puppet agent docker image..."
+cd /vagrant/docker/puppet_agent
+docker build -t 'puppet_agent' .
+
+echo "Creating puppet master docker image..."
+cd /vagrant/docker/puppet_master
+docker build -t 'puppet_master' .
+
+popd
+
+docker run -t -h puppetmaster --name puppetmaster -p 127.0.0.1:8140:8140  -i -d puppet_master /usr/bin/puppet master --mkusers --no-daemonize --verbose --debug
+
+
+for host in api1; do
+echo "Starting container for $host"
+ docker run -t -h $host --name $host -i --link puppetmaster:pm -d puppet_agent /usr/bin/start-puppet-agent
+ # --certname $host --server $PM_PORT_8140_TCP_ADDR --masterport $PM_PORT_8140_TCP_PORT --no-daemonize --verbose --debug
+done
