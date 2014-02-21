@@ -8,5 +8,5 @@ RUN apt-get remove ruby1.8 -y
 RUN apt-get install ruby1.9.3 puppet -y
 
 ADD files/puppet.conf /etc/puppet/puppet.conf
-
 ADD files/site.pp /etc/puppet/manifests/site.pp
+ADD files/nodes.pp /etc/puppet/manifests/nodes.pp

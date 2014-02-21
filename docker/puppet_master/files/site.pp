@@ -1,4 +1,5 @@
-  file {'testfile':
+import "nodes"
+file {'testfile':
           path    => '/tmp/testfile',
           ensure  => present,
           mode    => 0640,

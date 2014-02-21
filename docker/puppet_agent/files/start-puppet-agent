@@ -1,3 +1,0 @@
-#!/bin/bash
-
-/usr/bin/puppet agent --certname $HOSTNAME --server $PM_PORT_8140_TCP_ADDR --masterport $PM_PORT_8140_TCP_PORT --no-daemonize --verbose --debug

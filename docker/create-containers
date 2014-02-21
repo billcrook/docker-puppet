@@ -1,5 +1,13 @@
 #!/bin/bash
 
+DNS_IP=172.17.42.1
+DNS_FALLBACK_IP=8.8.8.8
+DNS_PORT=53
+DOMAIN="crook.io"
+ENVIRONMENT="dev"
+PUPPET_MASTER_HOSTNAME=puppetmaster1.puppet_master.$ENVIRONMENT.$DOMAIN
+PUPPET_MASTER_PORT=8140
+
 pushd .
 
 echo "Creating puppet agent docker image..."
@@ -12,11 +20,30 @@ docker build -t 'puppet_master' .
 
 popd
 
-docker run -t -h puppetmaster --name puppetmaster -p 127.0.0.1:8140:8140  -i -d puppet_master /usr/bin/puppet master --mkusers --no-daemonize --verbose --debug
+docker pull crosbymichael/skydns
 
+docker run -d -p $DNS_IP:$DNS_PORT:$DNS_PORT/udp \
+ --name skydns crosbymichael/skydns \
+ -nameserver $DNS_FALLBACK_IP:$DNS_PORT \
+ -domain $DOMAIN
 
-for host in api1; do
-echo "Starting container for $host"
- docker run -t -h $host --name $host -i --link puppetmaster:pm -d puppet_agent /usr/bin/start-puppet-agent
- # --certname $host --server $PM_PORT_8140_TCP_ADDR --masterport $PM_PORT_8140_TCP_PORT --no-daemonize --verbose --debug
+docker pull crosbymichael/skydock
+
+docker run -d -v /var/run/docker.sock:/docker.sock \
+ --name skydock \
+ -link skydns:skydns crosbymichael/skydock \
+ -ttl 30 -environment $ENVIRONMENT \
+ -s /docker.sock -domain $DOMAIN
+
+docker run -t -h $PUPPET_MASTER_HOSTNAME \
+ --name puppetmaster1 \
+ --dns $DNS_IP \
+ -p $PUPPET_MASTER_PORT:$PUPPET_MASTER_PORT \
+ -i -d puppet_master /usr/bin/puppet master \
+ --mkusers --autosign true --no-daemonize --verbose --debug
+
+for h in api1 db1; do
+ host="$h.puppet_agent.$ENVIRONMENT.$DOMAIN"
+ echo "Starting container for $host"
+ docker run -t -h $host --dns $DNS_IP --name $h -i -d puppet_agent /usr/bin/puppet agent --certname $h --server $PUPPET_MASTER_HOSTNAME --no-daemonize --verbose --debug
 done
