@@ -1,6 +1,12 @@
 #!/bin/bash
 
-docker ps -q|xargs docker stop
-docker rm api1 db1 puppetmaster1 skydock skydns
+CONTAINERS=`docker ps -q`
+if [ ! -z $CONTAINERS ]; then
+ echo "Stopping containers"
+ echo $CONTAINERS|xargs docker stop
+ echo "Removing containers"
+ echo $CONTAINERS|xargs docker rm 
+fi
+echo "Removing base puppet images"
 docker rmi puppet_agent
 docker rmi puppet_master

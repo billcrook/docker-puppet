@@ -1,5 +1,6 @@
 #!/bin/bash
 
+CONTAINERS="$1"
 DNS_IP=172.17.42.1
 DNS_FALLBACK_IP=8.8.8.8
 DNS_PORT=53
@@ -42,8 +43,10 @@ docker run -t -h $PUPPET_MASTER_HOSTNAME \
  -i -d puppet_master /usr/bin/puppet master \
  --mkusers --autosign true --no-daemonize --verbose --debug
 
-for h in api1 db1; do
+for c in $CONTAINERS; do
+ h=`echo $c|awk -F: '{print $1}'`
+ port=`echo $c|awk -F: '{print $2}'`
  host="$h.puppet_agent.$ENVIRONMENT.$DOMAIN"
- echo "Starting container for $host"
- docker run -t -h $host --dns $DNS_IP --name $h -i -d puppet_agent /usr/bin/puppet agent --certname $h --server $PUPPET_MASTER_HOSTNAME --no-daemonize --verbose --debug
+ echo "Starting container for $host with port $port"
+ docker run -t -h $host --dns $DNS_IP --name $h -p $port -i -d puppet_agent /usr/bin/puppet agent --certname $h --server $PUPPET_MASTER_HOSTNAME --no-daemonize --verbose --debug
 done
